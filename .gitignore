@@ -1,0 +1,30 @@
+# ── Terraform state & secrets ─────────────────
+*.tfvars
+*.tfvars.json
+!*.tfvars.example        # keep the example file
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# ── Cloud credential files ────────────────────
+*.json
+!terraform.tfvars.example
+*.pem
+*.key
+
+# ── Local helper files ────────────────────────
+iam-policy.json
+
+# ── OS / editor noise ─────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

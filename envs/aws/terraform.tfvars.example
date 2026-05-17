@@ -1,32 +1,43 @@
 # ─────────────────────────────────────────────
-# Copy this to terraform.tfvars and fill in
-# your real values. Never commit terraform.tfvars!
+# Copy to terraform.tfvars — never commit that file
 # ─────────────────────────────────────────────
 
 project_name = "multicloud-vpn"
 environment  = "dev"
 region       = "us-east-1"
 
-# ── Mode ─────────────────────────────────────
-# true  = attach VPN to existing VPC (fill in aws_vpc_id below)
-# false = create new VPC + VPN (fill in vpn_cidr below)
-use_existing_vpc = true
+# ─────────────────────────────────────────────
+# Authentication — choose one method:
+#
+# Method 1 (recommended): Okta SSO / federated role
+#   Step 1: aws sso login --profile Cloud_DevOps
+#   Step 2: set aws_profile = "Cloud_DevOps" below
+#
+# Method 2: Default credential chain
+#   Leave aws_profile empty — uses ~/.aws/credentials default profile
+#
+# Method 3: Static credentials (not recommended for production)
+#   Leave aws_profile empty and set aws_access_key / aws_secret_key
+# ─────────────────────────────────────────────
 
-# ── VPN settings (required for both modes) ───
-on_prem_gateway_ip = "203.0.113.10"    # Public IP of your on-prem device
-on_prem_cidr       = "192.168.1.0/24"  # Your on-prem network CIDR
-shared_key         = "CHANGE_ME_alphanumeric_only"  # No special characters
+aws_profile = "Cloud_DevOps"   # Set to "" to use default credential chain
 
-# ── Existing VPC mode (use_existing_vpc = true) ──
+# aws_access_key = ""          # Only needed for Method 3
+# aws_secret_key = ""          # Only needed for Method 3
+
+# ─────────────────────────────────────────────
+# VPN settings
+# ─────────────────────────────────────────────
+on_prem_gateway_ip = "203.0.113.10"    # Public IP of on-premises VPN device
+on_prem_cidr       = "192.168.1.0/24"  # On-premises network CIDR
+shared_key         = "CHANGE_ME_alphanumeric_only"  # Letters and numbers only
+
+# ─────────────────────────────────────────────
+# Existing VPC
+# ─────────────────────────────────────────────
 aws_vpc_id = "vpc-xxxxxxxxxxxxxxxxx"
+
 aws_route_table_ids = [
   "rtb-xxxxxxxxxxxxxxxxx",
   "rtb-yyyyyyyyyyyyyyyyy"
 ]
-
-# ── New VPC mode (use_existing_vpc = false) ──
-# vpn_cidr = "10.0.0.0/16"
-
-# ── AWS credentials (optional if using aws configure) ──
-# aws_access_key = ""
-# aws_secret_key = ""

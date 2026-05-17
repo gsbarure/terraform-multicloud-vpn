@@ -1,280 +1,168 @@
-# 🌐 Terraform Multi-Cloud VPN
+# Terraform Multi-Cloud VPN
 
-> Deploy a Site-to-Site VPN on **AWS**, **Azure**, or **GCP** using a single Terraform codebase.  
-> Supports both **creating a new VPC** and **attaching to an existing VPC**.
+Deploy a Site-to-Site IPSec VPN on **AWS**, **Azure**, or **GCP** using a single Terraform codebase.  
+Attaches to an **existing VPC/VNet/Network** — no new network resources created.
 
 ---
 
-## 📐 Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        YOUR CODEBASE                                │
+│                        REPOSITORY STRUCTURE                         │
 │                                                                     │
-│   envs/aws/        envs/azure/        envs/gcp/                    │
-│   ├── main.tf      ├── main.tf        ├── main.tf                  │
-│   ├── variables.tf ├── variables.tf   ├── variables.tf             │
-│   ├── outputs.tf   ├── outputs.tf     ├── outputs.tf               │
-│   └── *.tfvars     └── *.tfvars       └── *.tfvars                 │
-│         │                 │                  │                      │
-│         └─────────────────┴──────────────────┘                     │
+│   envs/aws/          envs/azure/          envs/gcp/                │
+│   (AWS provider      (Azure provider      (GCP provider            │
+│    only)              only)                only)                   │
+│       │                   │                    │                   │
+│       └───────────────────┴────────────────────┘                   │
 │                           │                                         │
 │                    modules/ (shared)                                │
-│                    ├── aws-vpn/                                     │
-│                    ├── aws-vpn-existing-vpc/                        │
-│                    ├── azure-vpn/                                   │
-│                    ├── azure-vpn-existing-vnet/                     │
-│                    ├── gcp-vpn/                                     │
-│                    └── gcp-vpn-existing-vpc/                        │
+│              aws-vpn-existing-vpc                                   │
+│              azure-vpn-existing-vnet                                │
+│              gcp-vpn-existing-vpc                                   │
 └─────────────────────────────────────────────────────────────────────┘
          │                   │                    │
          ▼                   ▼                    ▼
 ┌──────────────┐   ┌──────────────────┐   ┌─────────────────┐
 │     AWS      │   │      AZURE       │   │      GCP        │
+│  Existing    │   │  Existing VNet   │   │  Existing VPC   │
+│  VPC         │   │                  │   │  Network        │
 │              │   │                  │   │                 │
-│  VPC         │   │  VNet            │   │  VPC Network    │
-│  VPN Gateway │   │  VPN Gateway     │   │  VPN Gateway    │
-│  Customer GW │   │  Local Net GW    │   │  VPN Tunnel     │
-│  VPN Conn    │   │  VPN Connection  │   │  Routes         │
+│  + VPN GW    │   │  + VPN Gateway   │   │  + VPN Gateway  │
+│  + CGW       │   │  + Local Net GW  │   │  + VPN Tunnel   │
+│  + VPN Conn  │   │  + VPN Conn      │   │  + Routes       │
+│  + Routes    │   │                  │   │                 │
 └──────┬───────┘   └────────┬─────────┘   └──────┬──────────┘
        │                    │                     │
        └────────────────────┴─────────────────────┘
                             │
                     IPSec Tunnel (IKEv2)
                             │
-                    ┌───────▼────────┐
-                    │  ON-PREMISES   │
-                    │  VPN Device    │
-                    │  (Firewall /   │
-                    │   Router)      │
-                    └────────────────┘
-```
-
-### Two Deployment Modes
-
-```
-MODE A — Create new VPC + VPN          MODE B — Existing VPC + VPN only
-─────────────────────────────          ─────────────────────────────────
-use_existing_vpc = false               use_existing_vpc = true
-
-Creates:                               Creates:
-  ✅ VPC / VNet / Network                ✅ VPN Gateway
-  ✅ Subnets                             ✅ Customer Gateway
-  ✅ Internet Gateway                    ✅ VPN Connection
-  ✅ Route Tables                        ✅ Route Propagation
-  ✅ VPN Gateway                         ✅ Customer Config File
-  ✅ Customer Gateway
-  ✅ VPN Connection
-  ✅ Customer Config File
+                   ┌────────▼────────┐
+                   │  ON-PREMISES    │
+                   │  VPN Device     │
+                   └─────────────────┘
 ```
 
 ---
 
-## 📋 Prerequisites
+## Authentication
 
-| Tool        | Version   | Download |
-|-------------|-----------|----------|
-| Terraform   | >= 1.5.0  | [developer.hashicorp.com/terraform](https://developer.hashicorp.com/terraform/downloads) |
-| AWS CLI     | >= 2.x    | [aws.amazon.com/cli](https://aws.amazon.com/cli/) |
-| Git         | >= 2.x    | [git-scm.com](https://git-scm.com/download/win) |
+This setup supports **Okta SSO / federated roles** — no static credentials needed.
+
+### Using Okta SSO (recommended)
+
+```cmd
+aws sso login --profile Cloud_DevOps
+```
+
+Then set in `terraform.tfvars`:
+```hcl
+aws_profile = "Cloud_DevOps"
+```
+
+Terraform picks up the session automatically. No keys stored anywhere.
+
+### Using default credential chain
+
+Leave `aws_profile` empty — Terraform uses `~/.aws/credentials` default profile.
+
+### Using static credentials
+
+Set `aws_access_key` and `aws_secret_key` in `terraform.tfvars` (not recommended for production).
 
 ---
 
-## 🚀 Quick Start — AWS (Step by Step)
+## Prerequisites
 
-### Step 1 — Clone the repository
+| Tool | Version | Download |
+|------|---------|----------|
+| Terraform | >= 1.5.0 | [developer.hashicorp.com/terraform](https://developer.hashicorp.com/terraform/downloads) |
+| AWS CLI | >= 2.x | [aws.amazon.com/cli](https://aws.amazon.com/cli/) |
+| Git | >= 2.x | [git-scm.com](https://git-scm.com/download/win) |
+
+---
+
+## Quick Start — AWS
 
 ```cmd
 git clone https://github.com/gsbarure/terraform-multicloud-vpn.git
-cd terraform-multicloud-vpn
-```
+cd terraform-multicloud-vpn\envs\aws
 
-### Step 2 — Configure AWS credentials
-
-```cmd
-aws configure
-```
-
-Enter when prompted:
-```
-AWS Access Key ID:     <your-access-key>
-AWS Secret Access Key: <your-secret-key>
-Default region name:   us-east-1
-Default output format: json
-```
-
-Verify it works:
-```cmd
-aws sts get-caller-identity
-```
-
-You should see your Account ID and IAM user ARN.
-
-### Step 3 — Create your tfvars file
-
-```cmd
-cd envs\aws
 copy terraform.tfvars.example terraform.tfvars
-```
+# Edit terraform.tfvars with your values
 
-Edit `terraform.tfvars` with your values:
-
-```hcl
-# ── Choose mode ───────────────────────────────
-use_existing_vpc = true        # true = use existing VPC
-                               # false = create new VPC
-
-# ── VPN settings ─────────────────────────────
-on_prem_gateway_ip = "YOUR_ON_PREM_PUBLIC_IP"   # Public IP of your router/firewall
-on_prem_cidr       = "192.168.0.0/24"           # Your on-prem network CIDR
-shared_key         = "YourStrongKey123abc"       # Pre-shared key (alphanumeric only)
-
-# ── If use_existing_vpc = true ────────────────
-aws_vpc_id          = "vpc-xxxxxxxxxxxxxxxxx"
-aws_route_table_ids = ["rtb-xxxxxxxxx", "rtb-yyyyyyyyy"]
-
-# ── If use_existing_vpc = false ───────────────
-# vpn_cidr = "10.0.0.0/16"
-```
-
-> ⚠️ **Pre-shared key rules:** Only letters, numbers, and underscores. No `@`, `!`, `#` or special characters.
-
-### Step 4 — Initialize Terraform
-
-```cmd
 terraform init
-```
-
-Expected output:
-```
-Terraform has been successfully initialized!
-```
-
-### Step 5 — Preview changes
-
-```cmd
 terraform plan
-```
-
-Review the resources that will be created. No changes are made yet.
-
-### Step 6 — Deploy
-
-```cmd
 terraform apply -auto-approve
 ```
 
-Wait ~8 minutes for the VPN connection to provision.
+---
 
-### Step 7 — Check outputs
+## Outputs
 
-After apply completes you will see:
+After apply:
 
 ```
 aws_account_id           = "362079386246"
-aws_iam_user_arn         = "arn:aws:iam::362079386246:user/Gajanan"
+aws_iam_principal        = "arn:aws:iam::362079386246:assumed-role/Cloud_DevOps/Gajanan"
 aws_region               = "us-east-1"
 environment              = "dev"
-network_id               = "vpc-0061848e929c452e5"
-vpc_cidr                 = "192.168.0.0/16"
+vpc_id                   = "vpc-0061848e929c452e5"
 vpc_name                 = "vpc-use11-name-dev"
-vpn_customer_config_file = "./vpn-customer-config.txt"
+vpc_cidr                 = "192.168.0.0/16"
 vpn_gateway_id           = "vgw-xxxxxxxxxxxxxxxxx"
 vpn_gateway_ip           = "x.x.x.x"
-vpn_tunnel_status        = "vpn-xxxxxxxxxxxxxxxxx"
+vpn_connection_id        = "vpn-xxxxxxxxxxxxxxxxx"
+vpn_customer_config_file = "./vpn-customer-config.txt"
 ```
 
-### Step 8 — Send config to customer
-
-The file `envs/aws/vpn-customer-config.txt` is auto-generated.  
-Send this file to your on-premises network team — it contains all tunnel settings.
+The file `vpn-customer-config.txt` is auto-generated — send it to your on-premises network team.
 
 ---
 
-## 🔁 Switching Clouds
-
-### Azure
-
-```cmd
-cd envs\azure
-copy terraform.tfvars.example terraform.tfvars
-# Fill in azure_subscription_id, azure_tenant_id, azure_client_id, azure_client_secret
-terraform init
-terraform plan
-terraform apply -auto-approve
-```
-
-### GCP
-
-```cmd
-cd envs\gcp
-copy terraform.tfvars.example terraform.tfvars
-# Fill in gcp_project_id and gcp_credentials_file
-terraform init
-terraform plan
-terraform apply -auto-approve
-```
-
----
-
-## 🗂️ Repository Structure
+## Repository Structure
 
 ```
 terraform-multicloud-vpn/
-│
-├── README.md                          ← You are here
-├── DEPLOYMENT-GUIDE.md                ← Detailed step-by-step guide
-├── .gitignore                         ← Blocks secrets from git
-│
-├── envs/                              ← One folder per cloud
+├── README.md
+├── DEPLOYMENT-GUIDE.md
+├── docs/
+│   └── VPN-Deployment-Guide.html      ← Downloadable guide (open in browser → Print as PDF)
+├── envs/
 │   ├── aws/
-│   │   ├── main.tf                    ← AWS provider + module calls
-│   │   ├── variables.tf               ← Input variables
-│   │   ├── outputs.tf                 ← All outputs incl. config file path
-│   │   ├── terraform.tfvars           ← Your values (gitignored)
-│   │   └── terraform.tfvars.example   ← Template (safe to commit)
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   ├── terraform.tfvars.example
+│   │   └── terraform.tfvars           ← Your values (gitignored)
 │   ├── azure/
-│   │   └── ...
 │   └── gcp/
-│       └── ...
-│
-└── modules/                           ← Reusable modules (shared)
-    ├── aws-vpn/                       ← Mode A: new VPC + VPN
-    ├── aws-vpn-existing-vpc/          ← Mode B: existing VPC + VPN only
-    ├── azure-vpn/
+└── modules/
+    ├── aws-vpn-existing-vpc/
     ├── azure-vpn-existing-vnet/
-    ├── gcp-vpn/
     └── gcp-vpn-existing-vpc/
 ```
 
 ---
 
-## 🧹 Destroy / Cleanup
-
-To remove all resources:
+## Cleanup
 
 ```cmd
-cd envs\aws
 terraform destroy -auto-approve
 ```
 
+Removes VPN Gateway, Customer Gateway, VPN Connection, and route propagation.  
+Does not touch the existing VPC.
+
 ---
 
-## ❓ Troubleshooting
+## Troubleshooting
 
 | Error | Fix |
 |-------|-----|
-| `InvalidVpnConnection.InvalidState` | Wait 2 more minutes and retry |
-| `InvalidParameterValue: pre-shared key` | Remove special chars from `shared_key` |
-| `AuthFailure` | Run `aws configure` and re-enter credentials |
-| `Error: No valid credential sources` | Run `aws sts get-caller-identity` to verify login |
-| `VPN Gateway already attached` | VPC already has a VGW — check AWS Console |
-
----
-
-## 🔐 Security Notes
-
-- Never commit `terraform.tfvars` — it is blocked by `.gitignore`
-- Rotate the `shared_key` regularly
-- Use IAM roles instead of access keys in production
-- Store secrets in AWS Secrets Manager for production workloads
+| `InvalidParameterValue: pre-shared key` | Use alphanumeric characters only in `shared_key` |
+| `AuthFailure` | Run `aws sso login --profile Cloud_DevOps` |
+| `VpnGatewayAttachmentLimitExceeded` | VPC already has a VPN Gateway attached |
+| `Still creating... [10m elapsed]` | Normal — AWS VPN connections take up to 10 minutes |

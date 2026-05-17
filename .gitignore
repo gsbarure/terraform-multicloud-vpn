@@ -17,6 +17,8 @@ override.tf.json
 vpn-customer-config.txt
 apply*.txt
 plan*.txt
+tfplan
+*.tfplan
 
 # ── Cloud credential files ────────────────────
 *.pem

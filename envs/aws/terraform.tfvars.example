@@ -1,0 +1,32 @@
+# ─────────────────────────────────────────────
+# Copy this to terraform.tfvars and fill in
+# your real values. Never commit terraform.tfvars!
+# ─────────────────────────────────────────────
+
+project_name = "multicloud-vpn"
+environment  = "dev"
+region       = "us-east-1"
+
+# ── Mode ─────────────────────────────────────
+# true  = attach VPN to existing VPC (fill in aws_vpc_id below)
+# false = create new VPC + VPN (fill in vpn_cidr below)
+use_existing_vpc = true
+
+# ── VPN settings (required for both modes) ───
+on_prem_gateway_ip = "203.0.113.10"    # Public IP of your on-prem device
+on_prem_cidr       = "192.168.1.0/24"  # Your on-prem network CIDR
+shared_key         = "CHANGE_ME_alphanumeric_only"  # No special characters
+
+# ── Existing VPC mode (use_existing_vpc = true) ──
+aws_vpc_id = "vpc-xxxxxxxxxxxxxxxxx"
+aws_route_table_ids = [
+  "rtb-xxxxxxxxxxxxxxxxx",
+  "rtb-yyyyyyyyyyyyyyyyy"
+]
+
+# ── New VPC mode (use_existing_vpc = false) ──
+# vpn_cidr = "10.0.0.0/16"
+
+# ── AWS credentials (optional if using aws configure) ──
+# aws_access_key = ""
+# aws_secret_key = ""

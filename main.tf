@@ -5,22 +5,28 @@
 
 provider "aws" {
   region     = var.region
-  access_key = var.aws_access_key
-  secret_key = var.aws_secret_key
+  access_key = var.aws_access_key != "" ? var.aws_access_key : null
+  secret_key = var.aws_secret_key != "" ? var.aws_secret_key : null
 }
 
 provider "azurerm" {
   features {}
-  subscription_id = var.azure_subscription_id
-  tenant_id       = var.azure_tenant_id
-  client_id       = var.azure_client_id
-  client_secret   = var.azure_client_secret
+  subscription_id = var.azure_subscription_id != "" ? var.azure_subscription_id : null
+  tenant_id       = var.azure_tenant_id != "" ? var.azure_tenant_id : null
+  client_id       = var.azure_client_id != "" ? var.azure_client_id : null
+  client_secret   = var.azure_client_secret != "" ? var.azure_client_secret : null
+
+  skip_provider_registration = true
 }
 
 provider "google" {
-  project     = var.gcp_project_id
-  region      = var.region
-  credentials = var.gcp_credentials_file != "" ? file(var.gcp_credentials_file) : null
+  project = var.gcp_project_id != "" ? var.gcp_project_id : "placeholder"
+  region  = var.region
+  # When not using GCP, provide empty credentials to prevent auth errors.
+  # Real credentials come from gcp_credentials_file or GOOGLE_APPLICATION_CREDENTIALS env var.
+  credentials = var.gcp_credentials_file != "" ? file(var.gcp_credentials_file) : jsonencode({
+    type = "service_account"
+  })
 }
 
 # ─────────────────────────────────────────────

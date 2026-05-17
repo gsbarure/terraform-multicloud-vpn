@@ -1,0 +1,12 @@
+project_name     = "multicloud-vpn"
+environment      = "dev"
+region           = "us-central1"
+use_existing_vpc = false
+vpn_cidr         = "10.0.0.0/16"
+
+on_prem_gateway_ip = "1.2.3.4"
+on_prem_cidr       = "192.168.0.0/24"
+shared_key         = "CHANGE_ME"
+
+gcp_project_id       = "your-gcp-project-id"
+gcp_credentials_file = "~/.gcp/service-account.json"

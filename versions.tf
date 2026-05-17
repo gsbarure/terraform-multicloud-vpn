@@ -16,3 +16,11 @@ terraform {
     }
   }
 }
+
+# ─────────────────────────────────────────────
+# Provider configs — unused providers are
+# harmless when their modules have count = 0,
+# BUT they still try to authenticate at plan.
+# Set skip flags to avoid credential errors
+# when only one cloud is being used.
+# ─────────────────────────────────────────────

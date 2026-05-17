@@ -1,7 +1,7 @@
 # ── Terraform state & secrets ─────────────────
 *.tfvars
 *.tfvars.json
-!*.tfvars.example        # keep the example file
+!*.tfvars.example        # keep example files
 *.tfstate
 *.tfstate.*
 .terraform/
@@ -13,9 +13,12 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 
+# ── Generated output files ────────────────────
+vpn-customer-config.txt
+apply*.txt
+plan*.txt
+
 # ── Cloud credential files ────────────────────
-*.json
-!terraform.tfvars.example
 *.pem
 *.key
 

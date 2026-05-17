@@ -3,7 +3,10 @@ variable "environment"        { type = string }
 variable "region"             { type = string }
 variable "on_prem_gateway_ip" { type = string }
 variable "on_prem_cidr"       { type = string }
-variable "shared_key"         { type = string; sensitive = true }
+variable "shared_key" {
+  type      = string
+  sensitive = true
+}
 
 # ── Existing VPC inputs ───────────────────────
 variable "vpc_id" {
